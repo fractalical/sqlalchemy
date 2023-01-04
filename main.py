@@ -27,39 +27,23 @@ if __name__ == '__main__':
     # sql.add_book_to_shop(table_name="stock", title="Book 1", publisher="Gogol", shop="Буквоед", add_count=10)
     # sql.add_sale(table_name="Sale", title="Book 1", publisher="Gogol", shop="Буквоед", sold_count=3, price=250)
 
-    # sql.get_sales(publisher="Gogol")
-
-    request_commads = {
-        'publisher': sql.add_publisher,
-        'book': sql.add_book,
-        'shop': sql.add_shop,
-        'stock': sql.add_book_to_shop,
-        'sale': sql.add_sale
-    }
-
-    with open("test_data.json", encoding='utf-8', mode='r') as file:
-        data = json.load(file)
-        for row in data:
-            print(row)
-            if row['model'] == 'publisher':
-                sql.add_publisher(table_name='publisher')
-            elif row['model'] == 'book':
-                pass
-            elif row['model'] == 'shop':
-                pass
-            elif row['model'] == 'stock':
-                pass
-            elif row['model'] == 'sale':
-                pass
+    sql.get_sales(publisher="Pearson")
 
 
-    d = '2018-10-25T10:59:56.230Z'
+    # request_commands = {
+    #     'publisher': sql.add_publisher,
+    #     'book': sql.add_book,
+    #     'shop': sql.add_shop,
+    #     'stock': sql.add_book_to_shop,
+    #     'sale': sql.add_sale
+    # }
 
-    da = datetime.datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.%fZ')
-    t = datetime.datetime.today()
+    # with open("test_data.json", encoding='utf-8', mode='r') as file:
+    #     data = json.load(file)
+    #     for row in data:
+    #         print(row)
+    #         cmd = row['model']
+    #         request_commands[cmd](table_name=cmd, kwargs=row['fields'])
 
-    print(t)
-
-    print(da)
 
     session.close()

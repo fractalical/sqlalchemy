@@ -9,83 +9,72 @@ class SqlRequests():
         self.session = session
         self.tables = {"Publisher": Publisher, "Book": Book, "Shop": Shop, "Stock": Stock, "Sale": Sale}
 
-    def add_publisher(self, table_name: str, name: str):
+    def add_publisher(self, table_name: str, kwargs):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
         publishers = {q.name: q.id for q in session.query(table).all()}
-        if name in publishers:
-            print(f'This publisher ({name}) already exist')
-            return publishers[name]
+        if kwargs['name'] in publishers:
+            print(f'This publisher ({kwargs["name"]}) already exist')
+            return publishers[kwargs['name']]
         else:
-            new_data = table(name=name)
+            new_data = table(name=kwargs['name'])
             session.add(new_data)
             session.commit()
             print(f'{new_data} uploaded to {table_name}')
             return new_data.id
 
-    def add_book(self, table_name: str, title: str, id_publisher: int):
+    def add_book(self, table_name: str, kwargs):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
-        if (title, id_publisher) in [(q.title, q.id_publisher) for q in session.query(table).all()]:
-            print(f'This publisher ({title}) already exist')
+        if (kwargs['title'], kwargs['id_publisher']) in [(q.title, q.id_publisher) for q in session.query(table).all()]:
+            print(f'This publisher ({kwargs["title"]}) already exist')
         else:
-            new_data = table(title=title, id_publisher=id_publisher)
+            new_data = table(title=kwargs['title'], id_publisher=kwargs['id_publisher'])
             session.add(new_data)
             session.commit()
             print(f'{new_data} uploaded to {table_name}')
 
-    def add_shop(self, table_name: str, name: str):
+    def add_shop(self, table_name: str, kwargs):
 
-        res = self.add_publisher(table_name, name)
+        res = self.add_publisher(table_name, kwargs)
 
         return res
 
-    def add_book_to_shop(self, table_name: str, title: str or int, shop: str or int, add_count: int, publisher=None):
+    def add_book_to_shop(self, table_name: str, kwargs):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
-        if isinstance(title, int) and isinstance(shop, int):
-            id_book, id_shop = title, shop
-        else:
-            id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
-            id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher) \
-                .all()[0].id
-            id_shop = session.query(Shop).filter(Shop.name == shop) \
-                .all()[0].id
+        id_book, id_shop = kwargs['id_book'], kwargs['id_shop']
         count = session.query(table).filter(table.id_book == id_book, table.id_shop == id_shop).all()
         if not count:
             count = 0
-            new_data = table(id_book=id_book, id_shop=id_shop, count=count + add_count)
+            new_data = table(id_book=id_book, id_shop=id_shop, count=count + kwargs['count'])
             session.add(new_data)
         else:
             count = count[0].count
-            session.query(table).filter(table.id_book == id_book, table.id_shop == id_shop).update({'count': count + add_count})
+            session.query(table).filter(table.id_book == id_book, table.id_shop == id_shop)\
+                .update({'count': count + kwargs['count']})
         session.commit()
-        print(f'{add_count} {title} added to {shop}. Total count: {count + add_count}')
+        print(f'{kwargs["count"]} added. Total count: {count + kwargs["count"]}')
 
-    def add_sale(self, table_name: str, count: int, price: float,
-                 title=None, publisher=None, shop=None, id_stock=None, date_sale=None):
+    def add_sale(self, table_name: str, kwargs):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
-        if id_stock is None:
-            id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
-            id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher).all()[0].id
-            id_shop = session.query(Shop).filter(Shop.name == shop).all()[0].id
-            id_stock = session.query(Stock).filter(Stock.id_book == id_book, Stock.id_shop == id_shop).all()
-        else:
-            id_stock = session.query(Stock).filter(Stock.id == id_stock).all()
+        id_stock = session.query(Stock).filter(Stock.id == kwargs['id_stock']).all()
         if id_stock and id_stock[0].count > 0:
-            if id_stock[0].count - count > 0:
-                date_sale = datetime.datetime.today() if date_sale is None \
-                    else datetime.datetime.strptime(date_sale, '%Y-%m-%dT%H:%M:%S.%fZ')
-                new_data = table(price=price, date_sale=date_sale, id_stock=id_stock[0].id, count=count)
+            if id_stock[0].count - kwargs['count'] > 0:
+                date_sale = datetime.datetime.today() if kwargs['date_sale'] is None \
+                    else datetime.datetime.strptime(kwargs['date_sale'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                new_data = table(price=float(kwargs['price']), date_sale=date_sale,
+                                 id_stock=id_stock[0].id, count=kwargs['count'])
                 session.add(new_data)
-                session.query(Stock).filter(Stock.id == id_stock[0].id).update({'count': id_stock[0].count - count})
+                session.query(Stock).filter(Stock.id == id_stock[0].id)\
+                    .update({'count': id_stock[0].count - kwargs['count']})
                 session.commit()
-                print(f'{count} "{title}" was sold {date_sale}')
+                print(f'{kwargs["count"]} from "{id_stock}" was sold {date_sale}')
             else:
                 print(f'Not enough count. Available count = {id_stock[0].count}')
         else:
