@@ -10,7 +10,8 @@ from sql_user_info import login, password
 
 if __name__ == '__main__':
 
-    DSN = f'postgresql://{login}:{password}@localhost:5432/orm_db'
+    db_name = 'orm_db'
+    DSN = f'postgresql://{login}:{password}@localhost:5432/{db_name}'
 
     engine = sqlalchemy.create_engine(DSN)
 
