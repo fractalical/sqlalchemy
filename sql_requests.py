@@ -42,13 +42,18 @@ class SqlRequests():
 
         return res
 
-    def add_book_to_shop(self, table_name: str, title: str, publisher: str, shop: str, add_count: int):
+    def add_book_to_shop(self, table_name: str, title: str or int, shop: str or int, add_count: int, publisher=None):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
-        id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
-        id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher).all()[0].id
-        id_shop = session.query(Shop).filter(Shop.name == shop).all()[0].id
+        if isinstance(title, int) and isinstance(shop, int):
+            id_book, id_shop = title, shop
+        else:
+            id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
+            id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher) \
+                .all()[0].id
+            id_shop = session.query(Shop).filter(Shop.name == shop) \
+                .all()[0].id
         count = session.query(table).filter(table.id_book == id_book, table.id_shop == id_shop).all()
         if not count:
             count = 0
@@ -60,24 +65,29 @@ class SqlRequests():
         session.commit()
         print(f'{add_count} {title} added to {shop}. Total count: {count + add_count}')
 
-    def add_sale(self, table_name: str, title: str, publisher: str, shop: str, sold_count: int, price: float):
+    def add_sale(self, table_name: str, count: int, price: float,
+                 title=None, publisher=None, shop=None, id_stock=None, date_sale=None):
 
         session = self.session
         table = self.tables[table_name.capitalize()]
-        id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
-        id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher).all()[0].id
-        id_shop = session.query(Shop).filter(Shop.name == shop).all()[0].id
-        stock = session.query(Stock).filter(Stock.id_book == id_book, Stock.id_shop == id_shop).all()
-        if stock and stock[0].count > 0:
-            if stock[0].count - sold_count > 0:
-                today = datetime.datetime.today().strftime("%d.%m.%Y")
-                new_data = table(price=price, date_sale=today, id_stock=stock[0].id, count=sold_count)
+        if id_stock is None:
+            id_publisher = session.query(Publisher).filter(Publisher.name == publisher).all()[0].id
+            id_book = session.query(Book).filter(Book.title == title, Book.id_publisher == id_publisher).all()[0].id
+            id_shop = session.query(Shop).filter(Shop.name == shop).all()[0].id
+            id_stock = session.query(Stock).filter(Stock.id_book == id_book, Stock.id_shop == id_shop).all()
+        else:
+            id_stock = session.query(Stock).filter(Stock.id == id_stock).all()
+        if id_stock and id_stock[0].count > 0:
+            if id_stock[0].count - count > 0:
+                date_sale = datetime.datetime.today() if date_sale is None \
+                    else datetime.datetime.strptime(date_sale, '%Y-%m-%dT%H:%M:%S.%fZ')
+                new_data = table(price=price, date_sale=date_sale, id_stock=id_stock[0].id, count=count)
                 session.add(new_data)
-                session.query(Stock).filter(Stock.id_book == id_book, Stock.id_shop == id_shop).update({'count': stock[0].count - sold_count})
+                session.query(Stock).filter(Stock.id == id_stock[0].id).update({'count': id_stock[0].count - count})
                 session.commit()
-                print(f'{sold_count} "{title}" was sold {today}')
+                print(f'{count} "{title}" was sold {date_sale}')
             else:
-                print(f'Not enough count. Available count = {stock[0].count}')
+                print(f'Not enough count. Available count = {id_stock[0].count}')
         else:
             print('Not enough count. Available count = 0')
 
